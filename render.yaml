@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: lifeline
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_VERSION
+        value: 20
+      # Ключ: https://steamcommunity.com/dev/apikey
+      - key: STEAM_API_KEY
+        sync: false
+      # Необязательно: SteamID64 или имя из ссылки профиля. Можно указать и в настройках сайта.
+      - key: STEAM_ID
+        sync: false

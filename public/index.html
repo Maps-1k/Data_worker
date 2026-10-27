@@ -1,0 +1,195 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>LifeLine — таймлайн твоей жизни</title>
+  <meta name="description" content="Интерактивный планировщик: время как непрерывный поток, а Steam честно показывает, куда оно ушло.">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23131b27'/%3E%3Cpath d='M4 16h6l3-8 5 16 3-8h7' fill='none' stroke='%23f5792a' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Geologica:wght@400;500;600;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <svg viewBox="0 0 32 32" width="26" height="26" aria-hidden="true"><path d="M3 16h6l3-9 5 18 3-9h9" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    <span>LifeLine</span>
+  </div>
+  <nav class="tabs" aria-label="Разделы">
+    <button class="tab active" data-view="timeline" type="button">Таймлайн</button>
+    <button class="tab" data-view="stats" type="button">Статистика</button>
+  </nav>
+  <div class="spacer"></div>
+  <button class="steam-pill" id="steamPill" type="button" data-kind="off" title="Статус Steam">
+    <i class="dot"></i><span id="steamText">Steam: проверяю…</span>
+  </button>
+  <button class="btn ghost" id="btnSettings" type="button">Настройки</button>
+</header>
+
+<main>
+  <!-- ===================== ТАЙМЛАЙН ===================== -->
+  <section id="view-timeline" class="view active">
+    <div class="toolbar">
+      <div class="seg" id="zoomSeg" role="group" aria-label="Масштаб">
+        <button type="button" data-zoom="day">День</button>
+        <button type="button" data-zoom="week">Неделя</button>
+        <button type="button" data-zoom="month">Месяц</button>
+        <button type="button" data-zoom="year">Год</button>
+      </div>
+      <div class="seg" role="group" aria-label="Навигация">
+        <button type="button" id="navPrev" aria-label="Назад">‹</button>
+        <button type="button" id="navToday">Сегодня</button>
+        <button type="button" id="navNext" aria-label="Вперёд">›</button>
+      </div>
+      <div class="spacer"></div>
+      <button class="btn" id="btnSync" type="button">Синхронизировать Steam</button>
+      <button class="btn primary" id="btnAdd" type="button">Добавить задачу</button>
+    </div>
+
+    <div class="timeline" id="timeline">
+      <div class="ruler-row">
+        <div class="label-spacer"></div>
+        <div class="ruler" id="ruler"></div>
+      </div>
+      <div class="tracks-wrap" id="tracksWrap">
+        <div class="layer" id="gridLayer"></div>
+        <div id="tracks"></div>
+        <div class="layer" id="nowLayer"></div>
+        <div class="empty-hint" id="emptyHint" hidden>
+          <p><b>Здесь пока пусто.</b><br>Дважды щёлкни по дорожке, чтобы создать задачу, или загрузи пример, чтобы посмотреть, как всё работает.</p>
+          <button class="btn primary" type="button" id="btnDemo">Загрузить пример</button>
+        </div>
+      </div>
+    </div>
+
+    <p class="hint">
+      Тяни за фон — листаешь время. <kbd>Ctrl</kbd> + колесо — масштаб. Тяни блок — двигаешь, тяни за край — растягиваешь. Двойной клик по дорожке — новая задача.
+    </p>
+  </section>
+
+  <!-- ===================== СТАТИСТИКА ===================== -->
+  <section id="view-stats" class="view">
+    <div class="stats-grid">
+
+      <article class="card c-balance">
+        <header class="card-head">
+          <h2>Баланс недели</h2>
+          <div class="weeknav">
+            <button type="button" id="swPrev" aria-label="Предыдущая неделя">‹</button>
+            <span id="swLabel"></span>
+            <button type="button" id="swNext" aria-label="Следующая неделя">›</button>
+          </div>
+        </header>
+        <div class="balance">
+          <div class="donut" id="donut"></div>
+          <ul class="legend" id="balLegend"></ul>
+        </div>
+        <p class="note" id="balNote"></p>
+      </article>
+
+      <article class="card c-streak">
+        <header class="card-head"><h2>Серия</h2></header>
+        <div class="streak-big"><b id="stCur">0</b><span id="stCurLbl">дней подряд</span></div>
+        <p class="streak-sub" id="stSub"></p>
+        <div class="heat-days"><span>Пн</span><span>Вт</span><span>Ср</span><span>Чт</span><span>Пт</span><span>Сб</span><span>Вс</span></div>
+        <div class="heat" id="heat"></div>
+        <p class="note" id="stNote"></p>
+      </article>
+
+      <article class="card c-focus">
+        <header class="card-head"><h2>Динамика фокуса</h2><span class="muted-s">последние 90 дней</span></header>
+        <h3>По дням недели</h3>
+        <div class="bars bars-dow" id="barsDow"></div>
+        <h3>По часам суток</h3>
+        <div class="bars bars-hour" id="barsHour"></div>
+        <p class="note" id="focusNote"></p>
+      </article>
+
+      <article class="card c-steam">
+        <header class="card-head"><h2>Steam за 2 недели</h2><span class="muted-s" id="steamSyncAt"></span></header>
+        <div id="steamList"></div>
+      </article>
+
+    </div>
+  </section>
+</main>
+
+<!-- ===================== РЕДАКТОР ЗАДАЧИ ===================== -->
+<dialog id="editor" class="modal">
+  <div class="m-head">
+    <h2 id="edHead">Задача</h2>
+    <button type="button" class="x" id="edClose" aria-label="Закрыть">×</button>
+  </div>
+  <div class="m-body">
+    <label class="f"><span>Название</span>
+      <input id="edTitle" type="text" maxlength="120" placeholder="Например, проект по Blender" autocomplete="off">
+    </label>
+    <div class="row2">
+      <label class="f"><span>Дорожка</span><select id="edTrack"></select></label>
+      <label class="f"><span>Следить в Steam</span>
+        <input id="edKw" type="text" placeholder="blender (пусто — не следить)" autocomplete="off">
+      </label>
+    </div>
+    <div class="row2">
+      <label class="f"><span>Начало</span><input id="edStart" type="datetime-local"></label>
+      <label class="f"><span>Конец</span><input id="edEnd" type="datetime-local"></label>
+    </div>
+    <div class="f">
+      <span>Подзадачи <em id="edProg"></em></span>
+      <ul class="subs" id="edSubs"></ul>
+      <input id="edSubNew" type="text" placeholder="Новая подзадача, затем Enter" autocomplete="off">
+    </div>
+    <label class="chk" id="edDoneRow"><input type="checkbox" id="edDone"> Задача выполнена</label>
+    <div class="steam-info" id="edSteamInfo" hidden></div>
+  </div>
+  <div class="m-foot">
+    <button type="button" class="btn danger" id="edDelete">Удалить</button>
+    <div class="spacer"></div>
+    <button type="button" class="btn" id="edCancel">Отмена</button>
+    <button type="button" class="btn primary" id="edSave">Сохранить</button>
+  </div>
+</dialog>
+
+<!-- ===================== НАСТРОЙКИ ===================== -->
+<dialog id="settings" class="modal">
+  <div class="m-head">
+    <h2>Настройки</h2>
+    <button type="button" class="x" id="stClose" aria-label="Закрыть">×</button>
+  </div>
+  <div class="m-body">
+    <label class="f"><span>Твой Steam: ID, ссылка на профиль или имя</span>
+      <input id="sSteamId" type="text" placeholder="76561198000000000 или steamcommunity.com/id/nick" autocomplete="off">
+    </label>
+    <p class="small" id="sSteamHint"></p>
+    <div class="row2">
+      <label class="f"><span>Что считаем работой в Steam</span>
+        <input id="sKeyword" type="text" placeholder="blender" autocomplete="off">
+      </label>
+      <label class="f"><span>Дневная норма, часов</span>
+        <input id="sNorm" type="number" min="0.1" max="24" step="0.1">
+      </label>
+    </div>
+    <p class="small">Чтобы Steam видел, во что ты играешь, в профиле Steam → «Конфиденциальность» нужно открыть «Игровую информацию».</p>
+    <div class="data-actions">
+      <button type="button" class="btn" id="sExport">Скачать данные</button>
+      <button type="button" class="btn" id="sImport">Загрузить данные</button>
+      <button type="button" class="btn" id="sDemo">Пример данных</button>
+      <button type="button" class="btn danger" id="sClear">Стереть всё</button>
+      <input type="file" id="sFile" accept="application/json" hidden>
+    </div>
+    <p class="small">Задачи и сессии хранятся в этом браузере. Скачай копию, если хочешь перенести их на другое устройство.</p>
+  </div>
+  <div class="m-foot">
+    <div class="spacer"></div>
+    <button type="button" class="btn primary" id="sSave">Готово</button>
+  </div>
+</dialog>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script src="/app.js"></script>
+</body>
+</html>
